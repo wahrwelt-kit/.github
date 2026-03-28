@@ -59,20 +59,20 @@ r.Group(func(r chi.Router) {
 })
 ```
 
-Full working examples in [`examples/`](examples/).
+Full working examples in [`go-kit/examples/`](https://github.com/wahrwelt-kit/go-kit/tree/main/examples).
 
 ## Examples
 
-| Example                               | Router | Kits used                                |
-| ------------------------------------- | ------ | ---------------------------------------- |
-| [chi-rest](examples/chi-rest)         | chi    | logkit, httpkit, pgkit, jwtkit, cachekit |
-| [chi-realtime](examples/chi-realtime) | chi    | logkit, httpkit, wskit, cachekit         |
-| [gin-rest](examples/gin-rest)         | gin    | logkit, pgkit, jwtkit, cachekit          |
-| [gin-realtime](examples/gin-realtime) | gin    | logkit, wskit, cachekit                  |
+| Example                                                                                          | Router | Kits used                                |
+| ------------------------------------------------------------------------------------------------ | ------ | ---------------------------------------- |
+| [chi-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-rest/main.go)                  | chi    | logkit, httpkit, pgkit, jwtkit, cachekit |
+| [chi-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-realtime/main.go)          | chi    | logkit, httpkit, wskit, cachekit         |
+| [gin-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-rest/main.go)                  | gin    | logkit, pgkit, jwtkit, cachekit          |
+| [gin-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-realtime/main.go)          | gin    | logkit, wskit, cachekit                  |
 
 ## Benchmarks
 
-Aggregated benchmark results from all kits are available in [`benchmarks/`](benchmarks/).
+Aggregated benchmark results from all kits are available in [`go-kit/benchmarks/`](https://github.com/wahrwelt-kit/go-kit/tree/main/benchmarks).
 
 Run locally:
 
