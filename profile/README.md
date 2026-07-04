@@ -1,89 +1,82 @@
-# go-kit
+# wahrwelt-kit
 
-Opinionated Go toolkit - a collection of focused libraries for building production-ready backends.
+Focused Go modules for production backend services.
 
-Each kit is an independent module with its own versioning, CI, and minimal dependency surface.
+Each kit is versioned and released independently. The [`go-kit`](https://github.com/wahrwelt-kit/go-kit) repository is the composition layer with runnable examples showing how the modules fit together.
 
 ## Kits
 
-| Kit                                                         | Description                                                | Version                                                                                                                                       |
-| ----------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| [go-logkit](https://github.com/wahrwelt-kit/go-logkit)     | Structured logging (zerolog) with context, slog bridge, noop     | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-logkit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-logkit)     |
-| [go-httpkit](https://github.com/wahrwelt-kit/go-httpkit)   | HTTP middleware (i18n, metrics, timeout, JWT, IP), error handling | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-httpkit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-httpkit)   |
-| [go-pgkit](https://github.com/wahrwelt-kit/go-pgkit)       | PostgreSQL pool, migrations (goose/migrate), error helpers (pgx)  | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-pgkit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-pgkit)       |
-| [go-jwtkit](https://github.com/wahrwelt-kit/go-jwtkit)     | JWT auth — symmetric & asymmetric, middleware, revocation         | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-jwtkit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-jwtkit)     |
-| [go-cachekit](https://github.com/wahrwelt-kit/go-cachekit) | Redis cache + in-memory LRFU, singleflight, KV store, Pub/Sub    | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-cachekit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-cachekit) |
-| [go-wskit](https://github.com/wahrwelt-kit/go-wskit)       | WebSocket + SSE hub with Redis Pub/Sub scaling                    | [![Go Reference](https://pkg.go.dev/badge/github.com/wahrwelt-kit/go-wskit.svg)](https://pkg.go.dev/github.com/wahrwelt-kit/go-wskit)       |
+| Kit | Latest | Description |
+| --- | --- | --- |
+| [go-logkit](https://github.com/wahrwelt-kit/go-logkit) | `v0.6.0` | Structured logging on top of zerolog: JSON defaults, redaction, async writer, hooks, context fields, `log/slog` bridge |
+| [go-httpkit](https://github.com/wahrwelt-kit/go-httpkit) | `v0.7.0` | HTTP helpers for JSON APIs: errors, rendering, decoding, validation, pagination, SSE, health, middleware |
+| [go-httpkit/metrics](https://github.com/wahrwelt-kit/go-httpkit/tree/main/metrics) | `v0.7.0` | Prometheus HTTP middleware as a separate module |
+| [go-httpkit/localization](https://github.com/wahrwelt-kit/go-httpkit/tree/main/localization) | `v0.7.0` | go-i18n request localization middleware as a separate module |
+| [go-pgkit](https://github.com/wahrwelt-kit/go-pgkit) | `v1.4.0` | PostgreSQL pool setup, pgx helpers, transaction helpers, goose and golang-migrate runners |
+| [go-jwtkit](https://github.com/wahrwelt-kit/go-jwtkit) | `v0.6.0` | JWT access/refresh pairs, symmetric and asymmetric keys, strict claims, JWK/JWKS helpers, revocation |
+| [go-cachekit](https://github.com/wahrwelt-kit/go-cachekit) | `v0.7.0` | Redis JSON cache, SIEVE in-memory cache, TTL single-value cache, key-value and Pub/Sub helpers |
+| [go-wskit](https://github.com/wahrwelt-kit/go-wskit) | `v0.4.0` | WebSocket and SSE hub on coder/websocket with optional Redis Pub/Sub fan-out |
 
-## Dependency Graph
-
-```mermaid
-graph LR
-    httpkit -->  logkit
-    jwtkit -->  logkit
-    wskit -->  cachekit
-    pgkit
-    cachekit
-    logkit
-```
-
-## Quick Start
+## Install
 
 ```bash
-go get github.com/wahrwelt-kit/go-logkit@latest
-go get github.com/wahrwelt-kit/go-httpkit@latest
-go get github.com/wahrwelt-kit/go-pgkit@latest
-go get github.com/wahrwelt-kit/go-jwtkit@latest
-go get github.com/wahrwelt-kit/go-cachekit@latest
-go get github.com/wahrwelt-kit/go-wskit@latest
+go get github.com/wahrwelt-kit/go-logkit@v0.6.0
+go get github.com/wahrwelt-kit/go-httpkit@v0.7.0
+go get github.com/wahrwelt-kit/go-httpkit/metrics@v0.7.0
+go get github.com/wahrwelt-kit/go-httpkit/localization@v0.7.0
+go get github.com/wahrwelt-kit/go-pgkit@v1.4.0
+go get github.com/wahrwelt-kit/go-jwtkit@v0.6.0
+go get github.com/wahrwelt-kit/go-cachekit@v0.7.0
+go get github.com/wahrwelt-kit/go-wskit@v0.4.0
 ```
 
-Minimal chi server with logging, JWT auth, PostgreSQL and Redis cache:
+## Minimal Chi Composition
 
 ```go
+log, err := logkit.New(
+    logkit.WithServiceName("api"),
+)
+if err != nil {
+    return err
+}
+defer log.Close()
+
+slogLog := slog.New(logkit.SlogHandler(log))
+
 r := chi.NewRouter()
 r.Use(middleware.RequestID())
-r.Use(middleware.Logger(log, nil))
-r.Use(middleware.Recoverer(log))
-r.Use(middleware.Metrics(nil, httputil.ChiPathFromRequest))
-r.Use(middleware.Timeout(10 * time.Second))
-r.Use(middleware.I18n(bundle, middleware.WithLanguageQueryParam("lang")))
+r.Use(middleware.Logger(slogLog, nil))
+r.Use(middleware.Recoverer(slogLog))
+r.Use(middleware.SecurityHeaders())
+r.Use(middleware.ContextTimeout(10 * time.Second))
+r.Use(metrics.Middleware(nil, chiPathFromRequest, metrics.WithLogger(slogLog)))
+r.Use(localization.Middleware(bundle))
 
 r.Get("/health", httputil.HealthHandler(nil))
 r.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 r.Group(func(r chi.Router) {
-    r.Use(jwtkit.JWTAuth(jwtSvc, jwtkit.WithLogger(log)))
-    r.Get("/users/{id}", getUserHandler(pool, cache, lrfu))
-    r.Get("/users/{id}/export", exportUserHandler(pool, cache))
+    r.Use(jwtkit.JWTAuth(jwtSvc, jwtkit.WithLogger(slogLog)))
+    r.Get("/users/{id}", getUserHandler(pool, cache, l1))
 })
 ```
 
-Full working examples in [`go-kit/examples/`](https://github.com/wahrwelt-kit/go-kit/tree/main/examples).
+Full working examples live in [`go-kit/examples`](https://github.com/wahrwelt-kit/go-kit/tree/main/examples).
 
 ## Examples
 
-| Example                                                                                          | Router | Kits used                                |
-| ------------------------------------------------------------------------------------------------ | ------ | ---------------------------------------- |
-| [chi-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-rest/main.go)                  | chi    | logkit, httpkit, pgkit, jwtkit, cachekit |
-| [chi-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-realtime/main.go)          | chi    | logkit, httpkit, wskit, cachekit         |
-| [gin-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-rest/main.go)                  | gin    | logkit, pgkit, jwtkit, cachekit          |
-| [gin-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-realtime/main.go)          | gin    | logkit, wskit, cachekit                  |
-
-## Benchmarks
-
-Aggregated benchmark results from all kits are available in [`go-kit/benchmarks/`](https://github.com/wahrwelt-kit/go-kit/tree/main/benchmarks).
-
-Run locally:
-
-```bash
-./benchmarks/run.sh
-```
+| Example | Router | Kits used |
+| --- | --- | --- |
+| [chi-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-rest) | chi | logkit, httpkit, metrics, localization, pgkit, jwtkit, cachekit |
+| [chi-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/chi-realtime) | chi | logkit, httpkit, wskit, cachekit |
+| [gin-rest](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-rest) | gin | logkit, pgkit, jwtkit, cachekit |
+| [gin-realtime](https://github.com/wahrwelt-kit/go-kit/tree/main/examples/gin-realtime) | gin | logkit, wskit, cachekit |
 
 ## Design Principles
 
-- **Independent modules** - each kit has its own `go.mod`, semver, and CI pipeline
-- **Functional options** - consistent configuration pattern across all kits
-- **Consumer-side interfaces** - interfaces defined where they are used, not where implemented
-- **Zero framework lock-in** - middleware works with `http.Handler`; chi is preferred, not required
-- **Minimal dependencies** - each kit pulls only what it needs
+- **Small modules** - each kit owns one backend concern and keeps its public API narrow.
+- **Independent releases** - modules have separate `go.mod`, semantic versions, CI, and tags.
+- **Standard boundaries** - logging integration uses `log/slog`; HTTP middleware uses `net/http`.
+- **Functional options** - configuration style is consistent across the kits.
+- **Consumer-side interfaces** - applications define interfaces at their boundaries instead of importing broad kit interfaces.
+- **Production defaults** - fail-fast config validation, context-first APIs, strict parsing, safe redaction, and focused test coverage.
